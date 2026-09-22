@@ -1,0 +1,68 @@
+package main
+
+import (
+	"fmt"
+	"sync"
+	"time"
+)
+
+type BankAccount struct {
+	balance int
+	mutex   sync.Mutex
+}
+
+func (b *BankAccount) Deposit(amount int){
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+	b.balance += amount
+
+	fmt.Println("Deposit", amount)
+}
+
+func (b *BankAccount) withdraw(amount int){
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+
+	if b.balance < amount{
+		fmt.Println("Can nor withdraw that amount:", amount)
+		return 
+	}
+
+	b.balance -= amount
+	fmt.Println("Withdraw", amount)
+}
+
+func (b *BankAccount) Balance() int{
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+
+	return b.balance
+}
+
+
+func main(){
+	var wg sync.WaitGroup
+	var account = &BankAccount{balance: 150}
+
+	for i :=0; i< 10; i++ {
+		wg.Add(1)
+		go func(amount int){
+			defer wg.Done()
+			time.Sleep(time.Duration(amount) * time.Millisecond)
+			account.Deposit(amount)
+		}(i+1)
+	}
+
+	for i :=0; i<5; i++{
+		wg.Add(1)
+
+		go func(amount int){
+			defer wg.Done()
+			time.Sleep(time.Duration(amount) * time.Millisecond)
+			account.withdraw(amount * 10)
+		}(i + 1)
+	}
+
+	wg.Wait()
+	fmt.Println(account.Balance())
+}
